@@ -6,6 +6,7 @@ from torch import Tensor
 from torch.types import Device
 
 from fish_speech.models.text2semantic.fish_omni.config import FishOmniTextConfig
+from fish_speech.models.text2semantic.fish_omni.expert_cache import ExpertCache
 from fish_speech.models.text2semantic.fish_omni.fp8_moe import (
     FP8_BLOCK_SIZE,
     FP8_DTYPE,
@@ -84,6 +85,9 @@ class MoEExperts(nn.Module):
         self.hidden = hidden
         self.intermediate = intermediate
         self.fp8 = fp8
+        # CPU masters remain registered; the transient device cache is not saved
+        # in state_dict and must not be moved with a whole-model .to(...).
+        self.expert_cache: ExpertCache | None = None
         w13_shape = (num_experts, 2 * intermediate, hidden)
         w2_shape = (num_experts, hidden, intermediate)
         if not fp8:
@@ -113,6 +117,11 @@ class MoEExperts(nn.Module):
                 ),
             )
 
+    def _load_from_state_dict(self, *args, **kwargs):
+        if self.expert_cache is not None:
+            self.expert_cache.invalidate()
+        return super()._load_from_state_dict(*args, **kwargs)
+
     def expert_weights(
         self, index: Tensor | int, dtype: torch.dtype
     ) -> tuple[Tensor, Tensor]:
@@ -130,6 +139,16 @@ class MoEExperts(nn.Module):
 
     def forward(self, x: Tensor, topk_ids: Tensor, topk_weights: Tensor) -> Tensor:
         """x [N, H], topk_ids / topk_weights [N, k] -> weighted expert sum [N, H]."""
+        if self.expert_cache is not None:
+            if any(
+                getattr(self, name) is not source
+                for name, source in self.expert_cache.sources.items()
+            ):
+                raise RuntimeError(
+                    "offloaded expert masters were replaced; reload the model "
+                    "instead of calling .to() or assigning weights after setup"
+                )
+            return self.expert_cache.forward(x, topk_ids, topk_weights, fp8_moe_forward)
         if self.fp8 and x.is_cuda:
             return fp8_moe_forward(
                 x,

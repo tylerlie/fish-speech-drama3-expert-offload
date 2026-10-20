@@ -9,6 +9,16 @@ from torch import Tensor
 from torch.types import Device
 
 from fish_speech.models.text2semantic.fish_omni.config import FishOmniTextConfig
+from fish_speech.models.text2semantic.fish_omni.expert_cache import (
+    EXPERT_TENSORS,
+    GIB,
+    ExpertCache,
+    ExpertOffloadConfig,
+    ExpertStaging,
+    cache_capacities,
+    check_cuda_budget,
+    expert_bytes,
+)
 from fish_speech.models.text2semantic.fish_omni.fp8_moe import FP8_DTYPE
 from fish_speech.models.text2semantic.fish_omni.layers import (
     FullAttention,
@@ -124,14 +134,37 @@ class FishOmniBackbone(nn.Module):
         self.max_batch_size = 0
         self.max_seq_len = 0
         self.inverse_frequencies: dict[torch.device, Tensor] = {}
+        self.expert_offload_enabled = False
 
-    def materialize(self, devices: Sequence[Device]) -> None:
+    def materialize(
+        self, devices: Sequence[Device], *, offload_experts: bool = False
+    ) -> None:
         """Allocate a meta-device backbone over devices in contiguous layer ranges.
 
         Ranges are balanced by bytes, counting the embedding on the first device and
         the final norm + lm_head on the last.
         """
         devices = [torch.device(d) for d in devices]
+        if offload_experts:
+            if len(devices) != 1 or not all(
+                layer.mlp.experts.fp8 for layer in self.model.layers
+            ):
+                raise ValueError("expert offload requires one device and FP8 experts")
+            device = devices[0]
+            for module in (self.model.embed_tokens, self.model.norm, self.lm_head):
+                module.to_empty(device=device)
+            for layer in self.model.layers:
+                experts = layer.mlp.experts
+                # Allocate each module's own tensors, never recursively moving
+                # the experts onto CUDA even transiently during startup.
+                for module in layer.modules():
+                    module.to_empty(
+                        device="cpu" if module is experts else device, recurse=False
+                    )
+            self.expert_offload_enabled = True
+            self.inverse_frequencies.clear()
+            logger.info(f"FishOmni placement: backbone on {device}, FP8 experts on CPU")
+            return
         layer_bytes = [module_bytes(layer) for layer in self.model.layers]
         head = module_bytes(self.model.embed_tokens)
         tail = module_bytes(self.lm_head) + module_bytes(self.model.norm)
@@ -153,6 +186,49 @@ class FishOmniBackbone(nn.Module):
             + ", ".join(f"{d}: layers {v[0]}-{v[-1]}" for d, v in placement.items())
             + f"; embed on {devices[0]}, lm_head on {devices[-1]}"
         )
+
+    def setup_expert_offload(self, config: ExpertOffloadConfig) -> None:
+        """Attach caches after weights/tower load; reserve room for codec + runtime."""
+        if not self.expert_offload_enabled:
+            raise RuntimeError("materialize with offload_experts=True first")
+        experts = [layer.mlp.experts for layer in self.model.layers]
+        if any(e.expert_cache is not None for e in experts):
+            raise RuntimeError("expert caches are already initialized")
+        sources = [{name: getattr(e, name) for name in EXPERT_TENSORS} for e in experts]
+        sizes = [expert_bytes(source) for source in sources]
+        counts = [e.num_experts for e in experts]
+        slots = cache_capacities(
+            sizes, counts, self.config.num_experts_per_tok, config.cache_bytes
+        )
+        device = self.model.embed_tokens.weight.device
+        if device.type != "cuda":
+            raise ValueError("expert offload execution requires CUDA")
+        actual_bytes = sum(size * count for size, count in zip(sizes, slots))
+        check_cuda_budget(device, actual_bytes, config.reserve_bytes)
+        staging = ExpertStaging(max(sizes), pin_memory=True)
+        # Build all caches before publishing any; no partially configured model.
+        caches = [
+            ExpertCache(source, count, device, staging, max_rows=config.max_rows)
+            for source, count in zip(sources, slots)
+        ]
+        for module, cache in zip(experts, caches):
+            module.expert_cache = cache
+        host_bytes = sum(module_bytes(e) for e in experts)
+        logger.info(
+            f"Drama 3 expert offload: CPU masters {host_bytes / GIB:.2f} GiB, "
+            f"GPU cache {actual_bytes / GIB:.2f} GiB "
+            f"(budget {config.cache_bytes / GIB:.2f} GiB), "
+            f"slots/layer {min(slots)}..{max(slots)}, prefill rows <= {config.max_rows}, "
+            f"pinned staging {staging.buffer.numel() / 2**20:.2f} MiB; "
+            "blocking copies, CUDA graphs disabled"
+        )
+
+    def expert_cache_stats(self) -> dict[str, int]:
+        caches = [layer.mlp.experts.expert_cache for layer in self.model.layers]
+        return {
+            name: sum(getattr(cache, name) for cache in caches if cache is not None)
+            for name in ("hits", "misses", "transferred_bytes", "groups")
+        }
 
     def setup_caches(self, max_batch_size: int, max_seq_len: int) -> None:
         assert max_seq_len <= self.config.max_position_embeddings
@@ -282,6 +358,9 @@ def load_backbone_weights(
     Slots are (name, expert, part): stacked expert tensors are filled per expert and
     per gate / up / down projection, everything else whole.
     """
+    for layer in model.model.layers:
+        if layer.mlp.experts.expert_cache is not None:
+            layer.mlp.experts.expert_cache.invalidate()
     targets = dict(model.named_parameters())
     targets.update(model.named_buffers())
     expected: set[tuple[str, int, str]] = set()

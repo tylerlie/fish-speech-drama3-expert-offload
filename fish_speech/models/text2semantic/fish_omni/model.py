@@ -23,6 +23,7 @@ from fish_speech.models.text2semantic.fish_omni.config import (
     FP8_QUANT_METHOD,
     FishOmniConfig,
 )
+from fish_speech.models.text2semantic.fish_omni.expert_cache import ExpertOffloadConfig
 from fish_speech.models.text2semantic.fish_omni.fp8_moe import fp8_gemm_supported
 from fish_speech.models.text2semantic.fish_omni.tower import (
     FishOmniAudioDecoder,
@@ -87,6 +88,18 @@ class FishOmniModel(nn.Module):
         fp8_available = config.fp8_experts and fp8_gemm_supported(devices)
         forced = os.environ.get("FISH_DRAMA3_FP8_EXPERTS", "").strip()
         fp8_experts = forced == "1" if forced in ("0", "1") else fp8_available
+        offload = ExpertOffloadConfig.from_env()
+        if offload is not None and (
+            not fp8_experts
+            or len(devices) != 1
+            or torch.device(devices[0]).type != "cuda"
+            or torch.device(devices[0]) != torch.device(tower_device)
+        ):
+            raise ValueError(
+                "FISH_DRAMA3_EXPERT_OFFLOAD=1 requires an FP8 checkpoint and "
+                "backbone/tower on the same single cuda:N device; "
+                "do not set FISH_DRAMA3_FP8_EXPERTS=0"
+            )
         if fp8_experts and not fp8_available:
             raise ValueError(
                 f"FP8 experts need a {FP8_QUANT_METHOD} checkpoint and SM89+ CUDA "
@@ -102,7 +115,10 @@ class FishOmniModel(nn.Module):
                 config.text, fp8_experts=fp8_experts, dtype=dtype
             )
             audio_decoder = FishOmniAudioDecoder(config, dtype=dtype)
-        backbone.materialize(devices)
+        if offload is None:
+            backbone.materialize(devices)
+        else:
+            backbone.materialize(devices, offload_experts=True)
         load_backbone_weights(
             backbone,
             iter_checkpoint_tensors(
@@ -117,6 +133,8 @@ class FishOmniModel(nn.Module):
                 skip_prefixes=(CHECKPOINT_BACKBONE_PREFIX, CHECKPOINT_LM_HEAD_KEY),
             ),
         )
+        if offload is not None:
+            backbone.setup_expert_offload(offload)
         tokenizer = Tokenizer.from_file(str(checkpoint_dir / "tokenizer.json"))
         return cls(config, backbone, audio_decoder, tokenizer).eval()
 

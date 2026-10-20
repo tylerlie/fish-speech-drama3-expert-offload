@@ -343,6 +343,11 @@ class Drama3DecodeGraphs:
         cls, model: FishOmniModel, capacity: int
     ) -> "Drama3DecodeGraphs | None":
         """The model's graphs (captured on first use), or None to decode eagerly."""
+        if model.backbone.expert_offload_enabled:
+            # CPU routing, LRU decisions and host copies cannot be captured in
+            # the original whole-step graph. CPU experts are buffers, so merely
+            # checking parameter devices below would miss them.
+            return None
         if os.environ.get("FISH_DRAMA3_CUDA_GRAPH", "1") == "0":
             return None
         if capacity > cls.graph_capacity(model):

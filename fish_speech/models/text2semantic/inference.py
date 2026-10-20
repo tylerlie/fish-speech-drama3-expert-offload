@@ -951,6 +951,11 @@ def generate_long_drama3(
             for device in devices:
                 torch.cuda.reset_peak_memory_stats(device)
             t0 = time.perf_counter()
+            cache_before = (
+                model.backbone.expert_cache_stats()
+                if model.backbone.expert_offload_enabled
+                else None
+            )
             frames, finish_reason = generate_drama3(
                 model,
                 prompt,
@@ -960,6 +965,18 @@ def generate_long_drama3(
                 top_p=top_p,
             )
             elapsed = time.perf_counter() - t0
+            if cache_before is not None:
+                cache_after = model.backbone.expert_cache_stats()
+                delta = {
+                    key: cache_after[key] - value for key, value in cache_before.items()
+                }
+                lookups = delta["hits"] + delta["misses"]
+                logger.info(
+                    f"Expert cache: {delta['hits']}/{lookups} group-unique hits, "
+                    f"{delta['misses']} loads, "
+                    f"{delta['transferred_bytes'] / 2**30:.3f} GiB transferred, "
+                    f"{delta['groups']} groups"
+                )
             logger.info(
                 f"Sample {sample_idx}, chunk {chunk_idx + 1}/{len(chunks)}: "
                 f"{len(prompt)}-row prompt, {len(frames)} frames in {elapsed:.2f}s "
