@@ -1,153 +1,120 @@
-<div align="center">
-<h1>Fish Speech</h1>
+# Fish Speech · Drama 3 Expert Offload
 
-**English** | [简体中文](docs/README.zh.md) | [Portuguese](docs/README.pt-BR.md) | [日本語](docs/README.ja.md) | [한국어](docs/README.ko.md) | [العربية](docs/README.ar.md) | [Español](docs/README.es.md)  <br>
+基于 [Fish Speech 官方仓库](https://github.com/fishaudio/fish-speech)的社区改造项目，目标是在 **单张 RTX 5090 32GB** 上运行 Drama 3，保留官方 Fish API，并继续使用现有 ComfyUI 插件和工作流。
 
-<a href="https://www.producthunt.com/products/fish-speech?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-fish&#0045;audio&#0045;s1" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=1023740&theme=light&period=daily&t=1761164814710" alt="Fish&#0032;Audio&#0032;S1 - Expressive&#0032;Voice&#0032;Cloning&#0032;and&#0032;Text&#0045;to&#0045;Speech | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-<a href="https://trendshift.io/repositories/7014" target="_blank">
-    <img src="https://trendshift.io/api/badge/repositories/7014" alt="fishaudio%2Ffish-speech | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-</a>
-<br>
-</div>
-<br>
+改造方向是将路由专家的原始 FP8 权重保存在 CPU 内存中，使用固定预算的 GPU 专家缓存按需调入并执行。其余模型部分优先常驻 GPU，不额外进行 INT4 量化，不裁剪专家，也不减少原模型每次选择的专家数量。
 
-<div align="center">
-    <img src="https://count.getloli.com/get/@fish-speech?theme=asoul" /><br>
-</div>
+> **当前状态：方案确定，尚未实现专家卸载。** 当前推理代码仍为上游实现，不能直接视为支持 32GB 显卡。本文中的卸载能力、资源预算和兼容范围是开发目标；速度、音质与显存峰值需要真实 GPU 验证。
 
-<br>
+## 项目目标
 
-<div align="center">
-    <a target="_blank" href="https://discord.gg/Es5qTB9BcN">
-        <img alt="Discord" src="https://img.shields.io/discord/1214047546020728892?color=%23738ADB&label=Discord&logo=discord&logoColor=white&style=flat-square"/>
-    </a>
-    <a target="_blank" href="https://hub.docker.com/r/fishaudio/fish-speech">
-        <img alt="Docker" src="https://img.shields.io/docker/pulls/fishaudio/fish-speech?style=flat-square&logo=docker"/>
-    </a>
-    <a target="_blank" href="https://pd.qq.com/s/bwxia254o">
-      <img alt="QQ Channel" src="https://img.shields.io/badge/QQ-blue?logo=tencentqq">
-    </a>
-</div>
+- 使用原 Drama 3 检查点，保留已有 FP8 专家权重及缩放参数。
+- 通过 CPU 内存与 GPU 缓存控制专家权重的显存占用。
+- 保持官方路由、共享专家、提示构造、采样和音频编解码逻辑。
+- 保持 `/v1/health`、`/v1/tts` 及现有请求、响应格式兼容，兼容性需在改造后回归验证。
+- ComfyUI 继续以 CPU 模式运行，现有插件、节点和工作流无需因卸载方案而修改。
+- 保留原版执行路径，通过显式配置启用卸载，便于对照测试和回退。
 
-<div align="center">
-    <a target="_blank" href="https://huggingface.co/fishaudio/drama-3">
-        <img alt="HuggingFace Drama 3" src="https://img.shields.io/badge/🤗%20-Drama%203-orange"/>
-    </a>
-    <a target="_blank" href="https://huggingface.co/fishaudio/s2-pro">
-        <img alt="HuggingFace S2-Pro" src="https://img.shields.io/badge/🤗%20-S2--Pro-orange"/>
-    </a>
-    <a target="_blank" href="https://fish.audio/blog/fish-audio-open-sources-s2/">
-        <img alt="Fish Audio Blog" src="https://img.shields.io/badge/Blog-Fish_Audio_S2-1f7a8c?style=flat-square&logo=readme&logoColor=white"/>
-    </a>
-    <a target="_blank" href="https://arxiv.org/abs/2610.18010">
-        <img alt="Paper | Technical Report" src="https://img.shields.io/badge/Paper-Technical_Report-b31b1b?style=flat-square"/>
-    </a>
-</div>
+Drama 3 本身已经是 MoE 模型。本项目改造的是专家的存储和执行调度，不改变模型架构，也不训练新模型。
 
-> [!IMPORTANT]
-> **License Notice**  
-> This codebase and its associated model weights are released under **[FISH AUDIO COMMUNITY LICENSE](LICENSE)**. The S2-Pro weights remain under the Fish Audio Research License. Please refer to [LICENSE](LICENSE) for more details. We will take action against any violation of the license.
+## 部署与工作流
 
-> [!WARNING]
-> **Legal Disclaimer**  
-> We do not hold any responsibility for any illegal usage of the codebase. Please refer to your local laws about DMCA and other related laws.
+目标部署为一个云容器、两个服务：
 
-## Quick Start
-
-### For Human
-
-- [Installation](https://speech.fish.audio/install/): environment setup, download weights, Docker deployment
-- [Inference](https://speech.fish.audio/inference/): command line, API server, WebUI
-
-> [!IMPORTANT]
-> **We strongly recommend SGLang-Omni for users who care about efficiency; see the [SGLang-Omni README](https://github.com/sgl-project/sglang-omni/blob/main/sglang_omni/models/fishaudio_drama_3/README.md).**
->
-> **For vLLM Omni server, please read [vLLM-Omni Fish Speech S2 Pro Recipe](https://github.com/vllm-project/vllm-omni/blob/main/recipes/fishaudio/Fish-Speech-S2-Pro.md) and the [User Guide](https://github.com/vllm-project/vllm-omni/blob/main/docs/user_guide/examples/online_serving/text_to_speech.md#fish-speech-s2-pro).**
-
-### For LLM Agent
-
-```
-Install and configure Fish Audio Drama 3 (or S2-Pro) by following the instructions here: https://speech.fish.audio/install/
+```text
+ComfyUI（CPU）
+    │ 现有插件与工作流
+    ▼
+Fish Speech API（0.0.0.0:18080）
+    │ 官方推理流程 + 专家卸载
+    ├── GPU：非专家部分、音频模块、专家缓存
+    └── CPU 内存：完整路由专家权重
 ```
 
-## Models
+沿用现有部署布局：
 
-| Model | Size | Weights | Description |
-|------|------|-------------|-------------|
-| **Drama 3** | 35B-A3B (3B active per token) | [HuggingFace](https://huggingface.co/fishaudio/drama-3) | New-generation flagship for multi-character scenes and long content, with multi-turn revision and local editing |
-| S2-Pro | 4B parameters | [HuggingFace](https://huggingface.co/fishaudio/s2-pro) | Previous-generation flagship with faster inference |
+```text
+/root/
+├── fish-speech/       本项目与 .fish 虚拟环境、模型
+├── ComfyUI/           ComfyUI 与 .comfy 虚拟环境、插件
+├── run.sh            先启动并预热 Fish，再启动 ComfyUI
+├── fish.log
+└── comfyui.log
+```
 
-The model type is detected from the checkpoint's `config.json`, and both share the same command line and API server.
+API 监听地址和端口由启动配置指定。服务只有在模型加载及真实推理预热成功后，才应被启动脚本判定为就绪。
 
----
+优先验收现有三类工作流；插件和工作流文件由现有 ComfyUI 项目提供，本仓库负责语音后端：
 
-## Fish Audio Drama 3
-
-**The new-generation voice model, upgraded across the board over S2-Pro.**
-
-Like the S2 series, Drama 3 supports multi-speaker generation, voice cloning and natural-language control, but it makes clear advances in long-form audio, interaction and editability.
-
-### Key features
-
-- **Multi-turn director revision**: guide the previous take directly ("gentler, and a bit sadder"), and the model regenerates it with that context instead of starting over.
-- **Infilling and precise editing**: edit audio the way you edit text — replace a single word ("Wednesday" → "Thursday") while the surrounding timbre and transitions stay natural.
-- **Scene-style multi-character production**: voice a complete scene with several characters straight from a script description, with streaming support for long text.
-- **Long dialogues and long speech**: built for long recordings and extended sessions, keeping characters and timbre stable throughout.
-- **Stronger expressiveness**: laughter, crying, whispers and dramatic emotion are no longer flattened by the reference, so the delivery is much closer to a real performance.
-- **Multilingual voice cloning**: sets a new level of SOTA for cross-lingual cloning error rates (CER / WER).
-- **Natural-language tag control**: inline tags such as `[whisper]`, `[angry]` and `[laughing]` control emotion and prosody.
-
-### What changed compared with S2-Pro
-
-| Capability | S2-Pro | Drama 3 |
+| 工作流 | 输入与行为 | 改造后的验收重点 |
 | --- | --- | --- |
-| Multi-speaker | Supported | Supported, as scene-style multi-character production |
-| Voice cloning | Supported | Supported, with lower multilingual error rates |
-| Inline natural-language instructions | Supported | Supported |
-| Local editing / infilling | Not supported | Supported |
-| Multi-turn director revision | Not supported | Supported |
-| Long content | Chunked generation | Long dialogues and long speech, with streaming |
-| Strong emotion (laughter, crying, whispers) | Moderate | Stronger |
+| 单音色克隆 / 生成 | 参考音频与对应文本可空；为空时生成语音 | 有参考与无参考两条路径 |
+| 原生多角色长文本 | 沿用现有角色集合与文本格式 | 接口回归；现有漏读问题单独记录 |
+| 拼接式多角色多语气 | 按非空换行逐次发送单人克隆请求，最多 9 个克隆角色 | 角色切换、语气、完整拼接与音频列表 |
 
-### Results
+逐行循环可以复用同一份模型与专家缓存，无需为每个角色加载一份模型。请求的参考信息、生成状态和随机种子必须保持隔离。专家卸载本身不意味着原生多角色漏读已修复。
 
-Drama 3 takes a clear leap over S2 on public benchmarks: multilingual voice cloning (MiniMax Multilingual Testset), free-form speech editing (Ming-Freeform) and multi-turn emotion revision (Step-Audio-Edit), where control precision, multilingual error rates (CER / WER) and style accuracy all surpass the previous generation.
+## 改造范围
 
-Read the [technical report](https://arxiv.org/abs/2610.18010) for the architecture, the training recipe and the full evaluation results.
+第一版先采用同步执行，建立可验证的正确性基线。
 
----
+| 部分 | 计划改动 |
+| --- | --- |
+| 模型加载与显存分配 | 专家从加载开始就留在 CPU，避免先把完整模型装入 GPU |
+| 专家缓存 | 每层固定配额，管理专家编号、缓存位置、淘汰和权重传输 |
+| 专家执行 | 调入缺失专家后复用原 FP8 计算内核，保留路由权重和输出合并逻辑 |
+| 预填充 | 在 MoE 内部按输入行分组，确保每组所需专家不超过缓存容量 |
+| CUDA Graph | 卸载首版禁用原整步图捕获；正确性通过后再评估分段优化 |
+| 请求执行 | 首版单 GPU 串行推理，保护共享状态与缓存位置的生命周期 |
+| 日志 | 记录实际缓存大小、命中率、传输量、阶段耗时与显存峰值 |
 
-## Fish Audio S2-Pro
+预计主要涉及 `fish_omni/backbone.py`、`fish_omni/moe.py`，新增独立缓存模块，并按需要调整模型初始化与生成入口。目录位于 `fish_speech/models/text2semantic/` 下。
 
-Our previous-generation flagship: natural-language controllable and emotionally expressive speech, about a hundred languages, and small enough to deploy on a consumer GPU.
+首版不引入 CPU 专家计算、自定义 CUDA 内核、预测式预取或额外低位量化。这些优化应在基线验证后分别评估。
 
-- **Inline natural-language instructions**: tags such as `[pause]`, `[excited]` and `[whisper]` control prosody and emotion anywhere in the text.
-- **Native multi-speaker generation**: speaker IDs separate the characters inside one text, so you no longer generate and concatenate one speaker at a time.
-- **Rapid voice cloning**: 10–30 seconds of reference audio is enough to reproduce a timbre.
-- **Single pass**: long audio can be streamed out in one go.
-- **Production streaming**: RTF 0.195 on a single H200, about 100 ms to first audio.
+## 开发阶段与状态
 
-Visit the [Fish Audio website](https://fish.audio/) for a live playground, and read the [blog post](https://fish.audio/blog/fish-audio-open-sources-s2/) and [technical report](https://arxiv.org/abs/2603.08823) for more details.
+| 阶段 | 完成条件 | 当前状态 |
+| --- | --- | --- |
+| 1. 项目说明 | 明确目标、边界、基线与验收方式 | 已整理 |
+| 2. 加载与缓存 | CPU 专家存储、GPU 固定预算缓存、显式开关 | 待实现 |
+| 3. 推理接入 | 预填充与逐帧生成正确执行，原路径可回退 | 待实现 |
+| 4. 自动验证 | 覆盖缓存命中、淘汰、重新载入和原路径回归 | 待执行 |
+| 5. 真实 GPU 验收 | 完成 5090 32GB 的显存、速度、音频与连续运行测试 | 待执行 |
+| 6. 性能优化 | 在正确性基线上评估异步传输与 CUDA Graph | 待评估 |
 
-<details>
-<summary><b>S2-Pro benchmark results (click to expand)</b></summary>
+当前上游基线：[`541566932abbaebcb0a40e562a1f846738383f38`](https://github.com/fishaudio/fish-speech/commit/541566932abbaebcb0a40e562a1f846738383f38)。后续更新上游时，应记录新基线并重新执行相关验证。
 
-| Benchmark | Fish Audio S2 |
-|------|------|
-| Seed-TTS Eval — WER (Chinese) | **0.54%** (best overall) |
-| Seed-TTS Eval — WER (English) | **0.99%** (best overall) |
-| Audio Turing Test (with instruction) | **0.515** posterior mean |
-| EmergentTTS-Eval — Win Rate | **81.88%** (highest overall) |
-| Fish Instruction Benchmark — TAR | **93.3%** |
-| Fish Instruction Benchmark — Quality | **4.51 / 5.0** |
-| Multilingual (MiniMax Testset) — Best WER | **11 of 24** languages |
-| Multilingual (MiniMax Testset) — Best SIM | **17 of 24** languages |
+## 资源预算与验证原则
 
-On Seed-TTS Eval, S2 achieves the lowest WER among all evaluated models including closed-source systems: Qwen3-TTS (0.77/1.24), MiniMax Speech-02 (0.99/1.90), Seed-TTS (1.12/2.25). On the Audio Turing Test, 0.515 surpasses Seed-TTS (0.417) by 24% and MiniMax-Speech (0.387) by 33%. On EmergentTTS-Eval, S2 achieves particularly strong results in paralinguistics (91.61% win rate), questions (84.41%), and syntactic complexity (83.39%).
+目标运行环境为 Linux、NVIDIA RTX 5090 32GB，以及支持该显卡和原 FP8 内核的 PyTorch / CUDA / Triton 组合。具体依赖版本需结合实际镜像与宿主驱动验证。
 
-<img src="./docs/assets/totalability.png" width=200%>
+初始规划如下，**均不是已经测得的最低配置或性能承诺**：
 
-</details>
+- GPU 专家缓存从 12 GiB 起步，验证后尝试 16 GiB；最终值由完整服务峰值决定。
+- 初期预留约 3–4 GiB 显存余量，预算需包含参考编码、生成状态、临时工作区和音频解码。
+- 优先使用 96GB 或以上 CPU 内存；64GB 是否足够，需核算加载峰值、容器额度及传输缓冲。
+- 核对实际 PCIe 链路、内存带宽和容器资源限制；显卡计算能力不能代替专家传输性能。
+
+验收分为三层：
+
+1. **计算正确性**：在相同输入和历史下，对比原版与卸载版的路由、专家输出及 logits；检查专家权重与缩放参数的配对和字节完整性。
+2. **任务与音频**：按相同 Case ID 验证中、英、日、法，覆盖无参考生成、声音克隆、语气、长文本和逐行多角色；检查漏读、静音、提前结束和音色稳定性。
+3. **运行稳定性与性能**：区分冷启动与热缓存，记录端到端 RTF、预填充耗时、逐帧耗时、传输量及显存峰值；覆盖连续请求、取消恢复和长短请求切换。
+
+保留原权重不保证同一种子输出逐样本一致。执行顺序与数值差异可能影响自回归生成，必须同时进行数值验证和实际音频评估。HTTP 200 或正常 EOS 也不能单独证明文稿完整生成。
+
+## 安装与使用状态
+
+当前尚无可用的专家卸载启动参数或 5090 专用启动脚本；不要仅替换仓库就认为已经完成 32GB 适配。参数与操作步骤将在实现并验证后补充。
+
+原版环境和接口说明可参考仓库内的[安装文档](docs/en/install.md)与[推理文档](docs/en/inference.md)。这些文档当前仍描述上游行为，包括原 Drama 3 的显存要求，不代表本项目已完成适配。已有可用镜像和模型可保留作对照，无需在文档准备阶段重装。
+
+## 上游与许可证
+
+本项目是社区 Fork，不代表 Fish Audio 官方发布或支持。模型与基础推理实现来自 [fishaudio/fish-speech](https://github.com/fishaudio/fish-speech)。
+
+保留仓库中的 [FISH AUDIO COMMUNITY LICENSE](LICENSE)；模型权重遵循其各自许可证。上游模型介绍及参考资料见[原中文说明](docs/README.zh.md)。
 
 ## Credits
 
