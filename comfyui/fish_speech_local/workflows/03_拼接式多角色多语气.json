@@ -1,0 +1,928 @@
+{
+  "last_node_id": 17,
+  "last_link_id": 16,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "DramaReference",
+      "title": "Reference 1 · 小明",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 2,
+      "type": "DramaReference",
+      "title": "Reference 2 · 小红",
+      "pos": [
+        450,
+        0
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "DramaReference",
+      "title": "Reference 3 · 可留空",
+      "pos": [
+        900,
+        0
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 4,
+      "type": "DramaReference",
+      "title": "Reference 4 · 可留空",
+      "pos": [
+        0,
+        420
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "DramaReference",
+      "title": "Reference 5 · 可留空",
+      "pos": [
+        450,
+        420
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 6,
+      "type": "DramaReference",
+      "title": "Reference 6 · 可留空",
+      "pos": [
+        900,
+        420
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 7,
+      "type": "DramaReference",
+      "title": "Reference 7 · 可留空",
+      "pos": [
+        0,
+        840
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 8,
+      "type": "DramaReference",
+      "title": "Reference 8 · 可留空",
+      "pos": [
+        450,
+        840
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 9,
+      "type": "DramaReference",
+      "title": "Reference 9 · 可留空",
+      "pos": [
+        900,
+        840
+      ],
+      "size": [
+        390,
+        355
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "DRAMA_REFERENCE",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 10,
+      "type": "DramaReferences",
+      "title": "References · 保留原九路汇总",
+      "pos": [
+        1380,
+        240
+      ],
+      "size": [
+        300,
+        260
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "reference_1",
+          "type": "DRAMA_REFERENCE",
+          "link": 1
+        },
+        {
+          "name": "reference_2",
+          "type": "DRAMA_REFERENCE",
+          "link": 2
+        },
+        {
+          "name": "reference_3",
+          "type": "DRAMA_REFERENCE",
+          "link": 3
+        },
+        {
+          "name": "reference_4",
+          "type": "DRAMA_REFERENCE",
+          "link": 4
+        },
+        {
+          "name": "reference_5",
+          "type": "DRAMA_REFERENCE",
+          "link": 5
+        },
+        {
+          "name": "reference_6",
+          "type": "DRAMA_REFERENCE",
+          "link": 6
+        },
+        {
+          "name": "reference_7",
+          "type": "DRAMA_REFERENCE",
+          "link": 7
+        },
+        {
+          "name": "reference_8",
+          "type": "DRAMA_REFERENCE",
+          "link": 8
+        },
+        {
+          "name": "reference_9",
+          "type": "DRAMA_REFERENCE",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "references",
+          "type": "DRAMA_REFERENCES",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaReferences"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "PrimitiveStringMultiline",
+      "title": "每行一段 · 角色名：[语气]台词",
+      "pos": [
+        1760,
+        0
+      ],
+      "size": [
+        430,
+        320
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "小明：你准备好了吗？接下来要测试语音了。\n小红：[开心]准备好了，我们出发吧。\n小明：[低声]路上小心一点。\n小红：[兴奋]好，马上出发！"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "DramaLoopReference",
+      "title": "循环 Reference · 按行单人克隆后拼接",
+      "pos": [
+        1760,
+        410
+      ],
+      "size": [
+        430,
+        240
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 10
+        },
+        {
+          "name": "references",
+          "type": "DRAMA_REFERENCES",
+          "link": 11
+        },
+        {
+          "name": "parameters",
+          "type": "DRAMA_API_PARAMETERS",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "完整拼接",
+          "type": "AUDIO",
+          "links": [
+            13,
+            14
+          ]
+        },
+        {
+          "name": "分段数组",
+          "type": "AUDIO",
+          "links": [
+            15,
+            16
+          ],
+          "shape": 6
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaLoopReference"
+      },
+      "widgets_values": [
+        42,
+        "fixed",
+        200,
+        4
+      ]
+    },
+    {
+      "id": 13,
+      "type": "DramaAPIParameters",
+      "title": "API 参数 · 三种生成节点通用",
+      "pos": [
+        1380,
+        740
+      ],
+      "size": [
+        410,
+        520
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "parameters",
+          "type": "DRAMA_API_PARAMETERS",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaAPIParameters"
+      },
+      "widgets_values": [
+        1.0,
+        0.9,
+        1024,
+        "生成节点种子",
+        42,
+        true,
+        "off",
+        "",
+        "wav",
+        false,
+        300,
+        1.2,
+        true,
+        "normal"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "PreviewAudio",
+      "title": "完整拼接试听",
+      "pos": [
+        2280,
+        0
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "SaveAudioAdvanced",
+      "title": "完整拼接保存",
+      "pos": [
+        2280,
+        280
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveAudioAdvanced"
+      },
+      "widgets_values": [
+        "audio/DramaLoop/full",
+        "flac"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "PreviewAudio",
+      "title": "分段数组 · 逐段试听",
+      "pos": [
+        2740,
+        0
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 17,
+      "type": "SaveAudioAdvanced",
+      "title": "分段数组 · 逐段保存",
+      "pos": [
+        2740,
+        280
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveAudioAdvanced"
+      },
+      "widgets_values": [
+        "audio/DramaLoop/segments",
+        "flac"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      10,
+      0,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      2,
+      2,
+      0,
+      10,
+      1,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      3,
+      3,
+      0,
+      10,
+      2,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      4,
+      4,
+      0,
+      10,
+      3,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      5,
+      5,
+      0,
+      10,
+      4,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      6,
+      6,
+      0,
+      10,
+      5,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      7,
+      7,
+      0,
+      10,
+      6,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      8,
+      8,
+      0,
+      10,
+      7,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      9,
+      9,
+      0,
+      10,
+      8,
+      "DRAMA_REFERENCE"
+    ],
+    [
+      10,
+      11,
+      0,
+      12,
+      0,
+      "STRING"
+    ],
+    [
+      11,
+      10,
+      0,
+      12,
+      1,
+      "DRAMA_REFERENCES"
+    ],
+    [
+      12,
+      13,
+      0,
+      12,
+      2,
+      "DRAMA_API_PARAMETERS"
+    ],
+    [
+      13,
+      12,
+      0,
+      14,
+      0,
+      "AUDIO"
+    ],
+    [
+      14,
+      12,
+      0,
+      15,
+      0,
+      "AUDIO"
+    ],
+    [
+      15,
+      12,
+      1,
+      16,
+      0,
+      "AUDIO"
+    ],
+    [
+      16,
+      12,
+      1,
+      17,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "API 参数 · 可共用",
+      "bounding": [
+        1360,
+        695,
+        450,
+        600
+      ],
+      "color": "#686a78",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "参考音色 · 至少填一个，最多九个，其余留空",
+      "bounding": [
+        -25,
+        -60,
+        1345,
+        1300
+      ],
+      "color": "#3f789e",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "原有汇总节点",
+      "bounding": [
+        1360,
+        170,
+        340,
+        370
+      ],
+      "color": "#3f789e",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "逐行生成 · 每个非空行都写角色名",
+      "bounding": [
+        1735,
+        -60,
+        495,
+        740
+      ],
+      "color": "#407a53",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "完整音频",
+      "bounding": [
+        2255,
+        -60,
+        440,
+        620
+      ],
+      "color": "#407a53",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "分段数组 · 不含额外段间停顿",
+      "bounding": [
+        2715,
+        -60,
+        440,
+        620
+      ],
+      "color": "#776398",
+      "font_size": 22,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7,
+      "offset": [
+        70,
+        100
+      ]
+    }
+  },
+  "version": 0.4
+}
