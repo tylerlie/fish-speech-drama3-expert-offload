@@ -4,6 +4,8 @@
 
 仓库现已包含 **Fish Speech Local 1.4.0** ComfyUI 插件，位于 [`comfyui/fish_speech_local`](comfyui/fish_speech_local/)。支持单音色克隆、普通生成、逐行多角色拼接及双参考重生，安装和用法见下文。
 
+新增 [A10G 四模型手动部署说明](deployment/a10g_compare/README.md)：S2-Pro、S1-mini、IndexTTS 2.0、IndexTTS 2.5 使用四份独立启动脚本，另附交互菜单。切换时先停止旧服务并检查 GPU 计算进程，所有模型分批串行测试；ComfyUI 使用 CPU。包含独立 Index HTTP 适配器、[Index 专用插件](comfyui/indextts_local/README.md)与一个工作流。S1 固定官方主线切换到 S2 前的最后兼容提交 `d3df50503b36314a964f66cac1af1e19e95bcfa3`。真实 GPU 速度与质量仍需容器验收。
+
 改造方向是将路由专家的原始 FP8 权重保存在 CPU 内存中，使用固定预算的 GPU 专家缓存按需调入并执行。其余模型部分优先常驻 GPU，不额外进行 INT4 量化，不裁剪专家，也不减少原模型每次选择的专家数量。
 
 > **当前状态：已包含同步专家卸载实现与 ComfyUI 插件。** 代码接入不等于完成单张 5090 32GB 的完整验收；速度、音质与显存峰值仍需在目标 GPU、模型和实际工作负载下验证。

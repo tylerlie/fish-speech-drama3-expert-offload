@@ -1,0 +1,396 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "IndexTTSReference",
+      "title": "音色参考 · 留空使用服务器默认音色",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        400,
+        355
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "INDEX_REFERENCE",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IndexTTSReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 2,
+      "type": "IndexTTSReference",
+      "title": "情绪参考 · 仅 audio 情绪模式需要",
+      "pos": [
+        0,
+        450
+      ],
+      "size": [
+        400,
+        355
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_in",
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference",
+          "type": "INDEX_REFERENCE",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IndexTTSReference"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "PrimitiveStringMultiline",
+      "title": "生成正文 · 不写 Fish 情绪标签",
+      "pos": [
+        490,
+        0
+      ],
+      "size": [
+        440,
+        260
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "你终于回来了！我还以为，再也见不到你了。回来就好，回来就好。"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "IndexTTSParameters",
+      "title": "情绪与推理参数 · 两版共用",
+      "pos": [
+        490,
+        340
+      ],
+      "size": [
+        440,
+        850
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "parameters",
+          "type": "INDEX_PARAMETERS",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IndexTTSParameters"
+      },
+      "widgets_values": [
+        "reference",
+        "",
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.8,
+        0.8,
+        30,
+        3,
+        10.0,
+        0.0,
+        1500,
+        120,
+        200,
+        false,
+        false,
+        "ZH",
+        1.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "IndexTTSGenerate",
+      "title": "Index 2.0 / 2.5 · 单次克隆或默认音色生成",
+      "pos": [
+        1020,
+        80
+      ],
+      "size": [
+        450,
+        180
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 1
+        },
+        {
+          "name": "reference",
+          "type": "INDEX_REFERENCE",
+          "link": 2
+        },
+        {
+          "name": "emotion_reference",
+          "type": "INDEX_REFERENCE",
+          "link": 3
+        },
+        {
+          "name": "parameters",
+          "type": "INDEX_PARAMETERS",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            5,
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IndexTTSGenerate"
+      },
+      "widgets_values": [
+        42,
+        "fixed"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PreviewAudio",
+      "title": "试听",
+      "pos": [
+        1550,
+        0
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "SaveAudioAdvanced",
+      "title": "保存无损 FLAC",
+      "pos": [
+        1550,
+        280
+      ],
+      "size": [
+        390,
+        220
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveAudioAdvanced"
+      },
+      "widgets_values": [
+        "audio/IndexTTS",
+        "flac"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      3,
+      0,
+      5,
+      0,
+      "STRING"
+    ],
+    [
+      2,
+      1,
+      0,
+      5,
+      1,
+      "INDEX_REFERENCE"
+    ],
+    [
+      3,
+      2,
+      0,
+      5,
+      2,
+      "INDEX_REFERENCE"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      3,
+      "INDEX_PARAMETERS"
+    ],
+    [
+      5,
+      5,
+      0,
+      6,
+      0,
+      "AUDIO"
+    ],
+    [
+      6,
+      5,
+      0,
+      7,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "音频输入 · 上传 / 下拉复用 / 上游连线",
+      "bounding": [
+        -25,
+        -60,
+        460,
+        900
+      ],
+      "color": "#3f789e",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "生成文稿与参数",
+      "bounding": [
+        465,
+        -60,
+        490,
+        1300
+      ],
+      "color": "#686a78",
+      "font_size": 22,
+      "flags": {}
+    },
+    {
+      "title": "服务端 GPU 推理 · ComfyUI CPU",
+      "bounding": [
+        995,
+        -60,
+        980,
+        680
+      ],
+      "color": "#407a53",
+      "font_size": 22,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7,
+      "offset": [
+        70,
+        100
+      ]
+    }
+  },
+  "version": 0.4
+}
