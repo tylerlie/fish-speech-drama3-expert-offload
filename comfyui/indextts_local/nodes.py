@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import json
+import math
 import os
 import urllib.error
 import urllib.parse
@@ -10,12 +11,13 @@ import urllib.request
 from .audio import available_reference_media, validate_reference, encode_reference, encode_audio_input, decode_audio
 
 UNCONNECTED = object()
+VOICE_ONLY = "仅参考音色"
+VOICE_AND_EMOTION = "参考音色＋情绪"
+REFERENCE_MODES = (VOICE_ONLY, VOICE_AND_EMOTION)
 EMOTIONS = ("happy", "angry", "sad", "afraid", "disgusted", "melancholic", "surprised", "calm")
 PARAMETERS = {
-    "emotion_mode": (["reference", "text", "vector", "audio"], {"default": "reference", "tooltip": "reference=跟随音色参考；text=情绪文字；vector=八维滑块；audio=独立情绪参考。"}),
-    "emotion_text": ("STRING", {"default": "", "multiline": True, "tooltip": "仅 text 模式生效；留空时从生成文稿分析情绪。文稿不要写 Fish 专用标签。"}),
-    "emo_alpha": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-    **{name: ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}) for name in EMOTIONS},
+    "emotion_text": ("STRING", {"default": "", "multiline": True, "tooltip": "仅参考音色时：非空使用此描述，留空才使用八维情绪节点。参考音色＋情绪时忽略描述与滑块。正文不用于自动情绪分析。"}),
+    "emo_alpha": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05, "tooltip": "文字或滑块情绪的强度；参考音色＋情绪时不使用此参数。"}),
     "temperature": ("FLOAT", {"default": 0.8, "min": 0.05, "max": 2.0, "step": 0.05}),
     "top_p": ("FLOAT", {"default": 0.8, "min": 0.01, "max": 1.0, "step": 0.05}),
     "top_k": ("INT", {"default": 30, "min": 0, "max": 1000}),
@@ -35,20 +37,24 @@ PARAMETERS = {
 class Reference:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"optional": {"audio": (available_reference_media(), {"default": ""}),
-                             "text": ("STRING", {"default": "", "multiline": True}),
+        return {"required": {"reference_mode": (list(REFERENCE_MODES), {"default": VOICE_ONLY})},
+                "optional": {"audio": (available_reference_media(), {"default": ""}),
                              "audio_in": ("AUDIO",)}}
     RETURN_TYPES = ("INDEX_REFERENCE",)
     RETURN_NAMES = ("reference",)
     FUNCTION = "bind"
     CATEGORY = "IndexTTS Local"
-    DESCRIPTION = "上传或选取参考音频，亦可连接上游 AUDIO（优先）。不需要参考原文，备注不参与推理。音频可空。"
+    DESCRIPTION = "在此选择仅参考音色，或同时参考音色和情绪。上传、下拉选择与上游 AUDIO 均支持，连线优先。音频为空时使用服务器默认参考；不需要参考原文。"
 
     @classmethod
-    def VALIDATE_INPUTS(cls, audio="", text="", audio_in=UNCONNECTED, input_types=None):
+    def VALIDATE_INPUTS(cls, reference_mode=VOICE_ONLY, audio="", audio_in=UNCONNECTED, input_types=None):
         try:
+            input_types = input_types or {}
+            if "reference_mode" not in input_types and reference_mode not in REFERENCE_MODES:
+                return "请在音频节点选择有效的参考方式。"
             for name, kind in (input_types or {}).items():
-                if kind != {"audio": "STRING", "text": "STRING", "audio_in": "AUDIO"}.get(name):
+                allowed = {"audio": ("STRING", "COMBO"), "reference_mode": ("STRING", "COMBO"), "audio_in": ("AUDIO",)}
+                if kind not in allowed.get(name, ()):
                     return "输入类型不匹配。"
             if "audio_in" in (input_types or {}) or audio_in is not UNCONNECTED or "audio" in (input_types or {}):
                 return True
@@ -58,32 +64,111 @@ class Reference:
             return str(exc)
 
     @classmethod
-    def IS_CHANGED(cls, audio="", text="", audio_in=UNCONNECTED):
+    def IS_CHANGED(cls, reference_mode=VOICE_ONLY, audio="", audio_in=UNCONNECTED):
         if audio_in is not UNCONNECTED:
             return float("nan")
         path = validate_reference(audio)
-        return hashlib.sha256(path.read_bytes()).hexdigest() if path else "empty"
+        return reference_mode + ":" + (hashlib.sha256(path.read_bytes()).hexdigest() if path else "server-default")
 
-    def bind(self, audio="", text="", audio_in=UNCONNECTED):
+    def bind(self, reference_mode=VOICE_ONLY, audio="", audio_in=UNCONNECTED):
+        if reference_mode not in REFERENCE_MODES:
+            raise ValueError("请在音频节点选择有效的参考方式。")
         if audio_in is not UNCONNECTED:
-            return ({"audio": encode_audio_input(audio_in)},)
-        path = validate_reference(audio)
-        return ({"audio": encode_reference(path)} if path else None,)
+            raw = encode_audio_input(audio_in)
+        else:
+            path = validate_reference(audio)
+            raw = encode_reference(path) if path else None
+        # Preserve the selection even when the audio uses the server default.
+        return ({"audio": raw, "reference_mode": reference_mode},)
+
+
+def validate_emotion_vector(values):
+    if not isinstance(values, (list, tuple)) or len(values) != 8:
+        raise ValueError("八维情绪必须包含 8 个 0–1 数值。")
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) or
+           not math.isfinite(v) or not 0 <= v <= 1 for v in values):
+        raise ValueError("八维情绪必须包含 8 个 0–1 数值。")
+    return [float(v) for v in values]
+
+
+class EmotionVector:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {name: ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05})
+                             for name in EMOTIONS}}
+    RETURN_TYPES = ("INDEX_EMOTION_VECTOR",)
+    RETURN_NAMES = ("emotion_vector",)
+    FUNCTION = "build"
+    CATEGORY = "IndexTTS Local"
+    DESCRIPTION = "八维情绪滑块，连接参数节点；仅参考音色且 emotion_text 为空时生效。全 0 表示不额外加强任何向量情绪；服务端按官方方法归一化。"
+
+    def build(self, **values):
+        if set(values) - set(EMOTIONS):
+            raise ValueError("存在未知的八维情绪参数。")
+        return (validate_emotion_vector([values.get(name, 0.0) for name in EMOTIONS]),)
 
 
 class Parameters:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": PARAMETERS}
+        return {"required": PARAMETERS, "optional": {"emotion_vector": ("INDEX_EMOTION_VECTOR",)}}
     RETURN_TYPES = ("INDEX_PARAMETERS",)
     FUNCTION = "build"
     CATEGORY = "IndexTTS Local"
+    DESCRIPTION = "情绪优先级：参考音色＋情绪 > 非空 emotion_text > 八维滑块。描述为空且未连接滑块时使用全 0 向量，不从正文分析情绪。"
 
-    def build(self, **values):
+    def build(self, emotion_vector=None, **values):
+        if set(values) - PARAMETERS.keys():
+            raise ValueError("Index 参数已更新，请导入新版工作流。")
         result = {key: options[1]["default"] for key, options in PARAMETERS.items()}
         result.update(values)
-        result["emotion_vector"] = [result.pop(name) for name in EMOTIONS]
+        # Validate the vector only when it wins the per-generator priority.
+        # A shared parameters node can feed generators with different sources.
+        if emotion_vector is not None:
+            result["emotion_vector"] = emotion_vector
         return (result,)
+
+
+def build_payload(text, seed=42, reference=None, parameters=None):
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("生成文稿不能为空。")
+    if parameters is not None and not isinstance(parameters, dict):
+        raise ValueError("请连接 Index 参数节点。")
+    if set(parameters or {}) - (set(PARAMETERS) | {"emotion_vector"}):
+        raise ValueError("Index 参数已更新，请导入新版工作流。")
+    payload = {**Parameters().build()[0], **(parameters or {}), "text": text, "seed": seed}
+    vector = payload.pop("emotion_vector", None)
+    mode = VOICE_ONLY
+    if reference is not None:
+        if not isinstance(reference, dict) or reference.get("reference_mode") not in REFERENCE_MODES:
+            raise ValueError("请连接新版 Index 音频参考节点。")
+        mode = reference["reference_mode"]
+        raw = reference.get("audio")
+        if raw is not None:
+            if not isinstance(raw, bytes) or not raw:
+                raise ValueError("参考音频无效，请重新选择或上传。")
+            payload["reference_audio"] = base64.b64encode(raw).decode("ascii")
+    if mode == VOICE_AND_EMOTION:
+        # Use exactly the same uploaded bytes for speaker and emotion. When no
+        # bytes are supplied, native reference mode reuses the server's default
+        # speaker audio for emotion as well. Parameter descriptions never apply.
+        payload.update(emotion_mode="reference", emotion_text="", emo_alpha=1.0)
+        if "reference_audio" in payload:
+            payload.update(emotion_mode="audio", emotion_audio=payload["reference_audio"])
+    else:
+        description = payload["emotion_text"]
+        if not isinstance(description, str):
+            raise ValueError("情绪描述必须是文本。")
+        if len(description) > 2000:
+            raise ValueError("情绪描述不得超过 2000 字符。")
+        if description.strip():
+            payload.update(emotion_mode="text", emotion_text=description.strip())
+        else:
+            # Explicit vector mode prevents blank emotion text from triggering
+            # upstream automatic analysis of the spoken body.
+            payload.update(emotion_mode="vector", emotion_text="",
+                           emotion_vector=validate_emotion_vector(vector if vector is not None else [0.0] * 8))
+    return payload
 
 
 class Generate:
@@ -91,31 +176,19 @@ class Generate:
     def INPUT_TYPES(cls):
         return {"required": {"text": ("STRING", {"forceInput": True}),
                              "seed": ("INT", {"default": 42, "min": 0, "max": 2**32-1, "control_after_generate": True})},
-                "optional": {"reference": ("INDEX_REFERENCE",), "emotion_reference": ("INDEX_REFERENCE",),
-                             "parameters": ("INDEX_PARAMETERS",)}}
+                "optional": {"reference": ("INDEX_REFERENCE",), "parameters": ("INDEX_PARAMETERS",)}}
     RETURN_TYPES = ("AUDIO",)
     RETURN_NAMES = ("audio",)
     FUNCTION = "run"
     CATEGORY = "IndexTTS Local"
-    DESCRIPTION = "调用独立 Index API，兼容 2.0/2.5。音色参考留空使用服务器默认音色，不是真正无参考生成。"
+    DESCRIPTION = "调用独立 Index API，兼容 2.0/2.5。优先跟随音频节点的音色＋情绪，否则先用非空情绪描述，描述为空才用八维滑块。正文只用于朗读；音频可空，使用服务器默认参考。"
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def run(self, text, seed=42, reference=None, emotion_reference=None, parameters=None):
-        if not isinstance(text, str) or not text.strip():
-            raise ValueError("生成文稿不能为空。")
-        payload = {**(parameters or Parameters().build()[0]), "text": text, "seed": seed}
-        for key, ref in (("reference_audio", reference), ("emotion_audio", emotion_reference)):
-            if ref is not None:
-                if not isinstance(ref, dict) or not isinstance(ref.get("audio"), bytes):
-                    raise ValueError("请连接 IndexTTS Reference 节点。")
-                payload[key] = base64.b64encode(ref["audio"]).decode("ascii")
-        if payload["emotion_mode"] != "audio":
-            payload.pop("emotion_audio", None)
-        elif not payload.get("emotion_audio"):
-            raise ValueError("audio 情绪模式需要填写独立情绪参考。")
+    def run(self, text, seed=42, reference=None, parameters=None):
+        payload = build_payload(text, seed, reference, parameters)
         url = os.environ.get("INDEX_TTS_API_URL", "http://127.0.0.1:18081").rstrip("/")
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
@@ -133,6 +206,8 @@ class Generate:
         return (decode_audio(raw),)
 
 
-NODE_CLASS_MAPPINGS = {"IndexTTSReference": Reference, "IndexTTSParameters": Parameters, "IndexTTSGenerate": Generate}
-NODE_DISPLAY_NAME_MAPPINGS = {"IndexTTSReference": "Index Reference · 可留空 / 外部音频优先",
+NODE_CLASS_MAPPINGS = {"IndexTTSReference": Reference, "IndexTTSEmotionVector": EmotionVector,
+                       "IndexTTSParameters": Parameters, "IndexTTSGenerate": Generate}
+NODE_DISPLAY_NAME_MAPPINGS = {"IndexTTSReference": "Index 音频参考 · 音色 / 音色＋情绪",
+    "IndexTTSEmotionVector": "Index 八维情绪 · 描述为空时生效",
     "IndexTTSParameters": "Index 参数 · 2.0 / 2.5", "IndexTTSGenerate": "Index 克隆 / 默认音色生成"}

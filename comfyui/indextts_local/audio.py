@@ -62,6 +62,8 @@ def encode_reference(path):
         except Exception as exc:
             raise ValueError('参考音频无法解码，请使用有效 WAV、FLAC 或受支持的音频文件。') from exc
     if rate <= 0 or len(samples) < rate / 10: raise ValueError('参考音频至少需要 0.1 秒。')
+    if len(samples) / rate > 15:
+        raise ValueError('参考音频不能超过 15 秒，请先裁剪；推荐 6–12 秒。')
     if not np.isfinite(samples).all(): raise ValueError('参考音频包含无效采样值。')
     data = io.BytesIO()
     sf.write(data, samples.mean(axis=1).clip(-1, 1), rate, format='FLAC', subtype='PCM_24')
@@ -88,6 +90,8 @@ def encode_audio_input(audio):
     samples = waveform.detach().to(device='cpu', dtype=torch.float32)[0].numpy()
     if samples.shape[1] < rate / 10:
         raise ValueError('参考音频至少需要 0.1 秒。')
+    if samples.shape[1] / rate > 15:
+        raise ValueError('参考音频不能超过 15 秒，请先裁剪；推荐 6–12 秒。')
     if not np.isfinite(samples).all():
         raise ValueError('参考音频包含无效采样值。')
     data = io.BytesIO()

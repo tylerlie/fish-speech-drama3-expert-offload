@@ -1,5 +1,6 @@
 import { app } from '../../scripts/app.js';
 import { api } from '../../scripts/api.js';
+import { syncEmotionControls } from './parameters.js';
 
 app.registerExtension({
   name: 'IndexTTSLocal.Reference',
@@ -16,10 +17,9 @@ app.registerExtension({
       };
       ensureAudioInput();
       const audio = node.widgets.find(w => w.name === 'audio');
-      const text = node.widgets.find(w => w.name === 'text');
-      if (!audio || !text) return;
-      audio.label = '参考音频'; text.label = '备注（不参与推理）';
-      if (text.inputEl) text.inputEl.placeholder = '可选备注，IndexTTS 不需要参考原文；此文本不会送入推理。';
+      const mode = node.widgets.find(w => w.name === 'reference_mode');
+      if (!audio || !mode) return;
+      audio.label = '参考音频'; mode.label = '参考方式';
       const root = document.createElement('div');
       root.dataset.indexReference = 'true';
       root.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:8px;box-sizing:border-box;background:#282a2d;border-radius:6px;width:100%;height:100%;color:#ddd;font:13px sans-serif';
@@ -28,7 +28,7 @@ app.registerExtension({
       const upload = document.createElement('button');
       const clear = document.createElement('button');
       const reload = document.createElement('button');
-      upload.textContent = '上传参考音频'; clear.textContent = '清空选择和备注';
+      upload.textContent = '上传参考音频'; clear.textContent = '清空音频';
       reload.textContent = '刷新媒体列表';
       for (const b of [upload, clear, reload]) {
         b.type = 'button';
@@ -56,24 +56,31 @@ app.registerExtension({
       const refresh = () => {
         const connected = node.inputs?.some(input => input.name === 'audio_in' && input.link != null);
         const filename = String(audio.value || '').trim();
+        const followsEmotion = mode.value === '参考音色＋情绪';
+        const purpose = followsEmotion
+          ? '同一音频用于音色和情绪；参数中的情绪描述、强度不生效。'
+          : '音色使用参考音频；情绪先取参数 emotion_text，描述为空才使用八维滑块。';
         if (connected) {
           player.pause(); player.removeAttribute('src'); player.load(); player.hidden = true;
-          status.textContent = '当前使用上游 audio_in；本地音频已忽略，IndexTTS 不需要参考原文。';
+          status.textContent = '当前使用上游音频，本地选择忽略。' + purpose;
         } else if (filename) {
           const parts = filename.replaceAll('\\', '/').split('/');
           const query = new URLSearchParams({filename: parts.pop(), subfolder: parts.join('/'), type: 'input'});
           const url = api.apiURL('/view?' + query);
           if (player.getAttribute('src') !== url) { player.src = url; player.load(); }
           player.hidden = false;
-          status.textContent = missingSelection ? '列表中未找到当前文件，请重新选择或上传；原选择已保留。' : '当前使用本地媒体，IndexTTS 不需要参考原文。';
+          status.textContent = missingSelection ? '列表中未找到当前文件，请重新选择或上传；原选择已保留。' : '当前使用所选音频（需 0.1–15 秒）。' + purpose;
         } else {
           player.pause(); player.removeAttribute('src'); player.load(); player.hidden = true;
-          status.textContent = '下拉选择已有媒体或上传新音频；音频为空时：音色端使用服务默认参考；情绪端不使用额外音频。';
+          status.textContent = '音频留空，使用服务器默认参考。' + purpose;
         }
+        syncEmotionControls(node.graph);
         node.setDirtyCanvas(true, true);
       };
       const previous = audio.callback;
       audio.callback = function () { previous?.apply(this, arguments); missingSelection = false; refresh(); };
+      const modeChanged = mode.callback;
+      mode.callback = function () { modeChanged?.apply(this, arguments); refresh(); };
       const reloadChoices = async () => {
         reload.disabled = true;
         try {
@@ -106,10 +113,9 @@ app.registerExtension({
         } finally { picker.value = ''; upload.disabled = clear.disabled = false; }
       });
       clear.addEventListener('click', () => {
-        audio.value = ''; text.value = '';
+        audio.value = '';
         missingSelection = false;
-        if (text.inputEl) text.inputEl.value = '';
-        text.callback?.(''); refresh();
+        refresh();
       });
       node.addDOMWidget('reference_controls', 'INDEX_REFERENCE_CONTROLS', root,
         {serialize: false, hideOnZoom: false, getMinHeight: () => 120, getMaxHeight: () => 140});
@@ -124,7 +130,7 @@ app.registerExtension({
       node.onConnectionsChange = function () { connectionsChanged?.apply(this, arguments); queueMicrotask(refresh); };
       const removed = node.onRemoved;
       node.onRemoved = function () { player.pause(); removed?.apply(this, arguments); };
-      node.setSize([Math.max(node.size[0], 390), Math.max(node.size[1], 345)]);
+      node.setSize([Math.max(node.size[0], 440), Math.max(node.size[1], 300)]);
       queueMicrotask(refresh);
     };
   }
